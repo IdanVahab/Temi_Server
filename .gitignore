@@ -1,0 +1,28 @@
+# ✅ Python cache
+__pycache__/
+*.py[cod]
+
+# ✅ Virtual environments
+venv/
+.venv/
+env/
+
+# ✅ YOLO weights, models, training data
+*.pt
+*.onnx
+*.weights
+*.zip
+runs/
+saved_frames/*.jpg
+saved_frames/*.png
+
+# ✅ Exclude practice model used only for testing
+src/model_train/practice_model/
+
+# ✅ IDE / OS metadata
+.DS_Store
+.idea/
+.vscode/
+src/moondream-0_5b-int8.mf
+src/moondream-0_5b-int8.mf 
+src/moondream-0_5b-int8.mf 
