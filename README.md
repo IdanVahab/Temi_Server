@@ -105,7 +105,7 @@ Please download it separately if using MoonDream integration.
 Training data and YOLO training weights (.pt) are also ignored for cleanliness.
 
 📦 Related Projects
-🤖 Android TEMI Client (coming soon)
+🤖 Android TEMI Client https://github.com/yardenmu/temi-project
 
 👤 Author
 Developed by Idan Vahab as part of a machine learning and multimedia final project
