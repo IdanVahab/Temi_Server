@@ -35,6 +35,33 @@ The system receives live image frames from TEMI, runs object detection (YOLOv8),
 
 ---
 
+## 🧠 Custom Model Training
+
+This project includes a **custom-trained YOLOv8 model** that was specifically trained to recognize objects and situations relevant to the scenario of heating food safely in a home kitchen environment.
+
+### 📸 Data Collection
+
+- Images were captured directly using the **TEMI robot’s camera** in real-world settings.
+- Multiple objects were included: **metal pots, plastic/glass plates, microwave (open/closed), cutlery, and more**.
+- Environmental diversity was maintained (different angles, lighting conditions, distances).
+
+### 🏷️ Labeling & Dataset
+
+- All images were uploaded and labeled using **[Roboflow](https://roboflow.com/)**.
+- Labels used include: `pot`, `metal_pot`, `Plate`, `Bowl`, `open microwave`, `closed microwave`, `cutlery`, `person`, etc.
+- The dataset was split into **training and validation sets** for proper evaluation.
+
+### 🧪 Training
+
+- The model was trained using the [Ultralytics YOLOv8 framework](https://docs.ultralytics.com).
+- Custom training script included: [`src/model_train/train.py`](src/model_train/train.py)
+- Trained weights saved in: `src/model_train/yolo_custom_training/weights/best.pt` (excluded from repo)
+- Training ran for **50 epochs** with data augmentation and fine-tuning.
+
+> The model was optimized to detect risky or assistive kitchen behaviors with high accuracy and low latency.
+
+---
+
 ## 🧠 Scenario Engine: How It Works
 
 The `ScenarioHandler` class is the brain of the system.  
