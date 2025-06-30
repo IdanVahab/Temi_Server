@@ -87,16 +87,21 @@ Example output:
   "incident_id": null
 }
 ```
-🧪 Example Use Case: Heating Food Safely
-User opens microwave
 
-System checks for presence of metal pots
+### 🏅 Scoring Mechanism
 
-User inserts plate → scenario: plate_inserted_into_microwave
+Each scenario is mapped to a predefined step.  
+When the correct scenario is detected, the robot proceeds and awards points.  
+Incorrect or unsafe actions result in warnings or repeat steps.
 
-Robot speaks: "Close the microwave when you're ready."
 
-If dangerous behavior is detected (e.g., metal pot in microwave) → robot warns the user
+### 🧪 Example Use Case: Heating Food Safely
+
+1. User opens microwave  
+2. System checks for presence of metal pots  
+3. User inserts plate → scenario: `plate_inserted_into_microwave`  
+4. Robot speaks: "Close the microwave when you're ready."  
+5. If dangerous behavior is detected (e.g., metal pot in microwave) → robot warns the user
 
 🏗 Project Structure
 ```
@@ -114,32 +119,75 @@ requirements.txt
 README.md
 
 ```
-🚀 Getting Started
-1. Install dependencies
-```
+## 📖 User Manual (Operation Guide)
+
+### 🔧 Installation
+
+```bash
+# 1. Clone the repository and enter the folder
+git clone https://github.com/IdanVahab/TEMI_Server.git
+cd TEMI_Server
+
+# 2. (Optional) Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
 ```
-2. Run the backend server
+Python 3.8 is required
+
+🚀 Running the Server
 ```
 uvicorn main:app --reload
+The server will open a WebSocket endpoint at:
+📡 ws://localhost:8000/ws
 ```
-The server exposes a WebSocket endpoint (/ws) for real-time frame analysis and scenario response.
 
-📎 Notes
-The model file moondream-0_5b-int8.mf is excluded from GitHub due to size limits (>600MB).
-Please download it separately if using MoonDream integration.
+Send base64-encoded images from the robot’s camera to this WebSocket.
+The server will analyze the image and return one of:
 
-Training data and YOLO training weights (.pt) are also ignored for cleanliness.
+A detected scenario (e.g., "pouring_food")
 
-📦 Related Projects
-🤖 Android TEMI Client https://github.com/yardenmu/temi-project
+A MoonDream description (every 3 seconds, optional)
+
+A fallback message such as "no_objects"
+
+🔁 Client Side – Robot Decision Engine
+On the Android client (TEMI robot), each scenario received from the server is evaluated by a Decision Engine:
+
+If the scenario matches the current expected step → action is executed (speech, movement)
+
+If not → the step is repeated until success
+
+Each successful match gives points toward task completion.
+See /docs/scenarios/heating_rice.md for a full step-by-step example.
+
+📦 System Architecture (Backend Flow)
+```mermaid
+graph TD
+A[Receive Frame] --> B[YOLOv8 Detection]
+B --> C[Deep SORT Tracking]
+C --> D[Scenario Handler]
+D --> E{Scenario Detected?}
+E -- Yes --> F[Send Text to Robot]
+E -- No --> G[Wait for next frame]
+F --> H[Robot Decision Engine]
+```
+
+
+###📎 Notes
+Model file moondream-0_5b-int8.mf is too large for GitHub (>600MB).
+If using MoonDream, place this file manually in src/.
+
+YOLO weights are ignored in .gitignore. Download or train using provided script.
 
 👤 Author
-Developed by Idan Vahab as part of a machine learning and multimedia final project
-
-Guided by real clinical use-cases for cognitive support
+Developed by Idan Vahab
+As a final project in Machine Learning & Multimedia, under real clinical guidance.
 
 🛡 License
-This project is currently private and intended for academic and research purposes.
+Private academic project – for demonstration, research and evaluation purposes only.
+
 
 
