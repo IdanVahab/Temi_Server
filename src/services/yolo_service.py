@@ -8,9 +8,12 @@ from deep_sort_realtime.deepsort_tracker import DeepSort
 import cv2
 import os
 from datetime import datetime
+from pathlib import Path
 
-# ✅ Load YOLO model
-model_path = "C:/Users/Idan Vahab/Desktop/TemiSafetyApp/src/model_train/yolo_custom_training/yolov8s_run/weights/best.pt"
+# ✅ Load YOLO model with relative path
+base_dir = Path(__file__).resolve().parent
+model_path = base_dir / "../model_train/yolo_custom_training/yolov8s_run/weights/best.pt"
+model_path = str(model_path.resolve())
 yolo_model = YOLO(model_path)
 if torch.cuda.is_available():
     yolo_model.to("cuda")
@@ -26,12 +29,25 @@ tracker = DeepSort(max_age=30)
 #     print(f"🖼 Frame saved: {path}")
 
 async def process_frame_and_predict(base64_string: str):
+    """
+    Decodes a base64-encoded image, performs YOLOv8 object detection and Deep SORT tracking,
+    then classifies the scenario based on detected objects.
+
+    Args:
+        base64_string (str): Base64-encoded image sent from the TEMI robot.
+
+    Returns:
+        Tuple:
+            - img_np (np.ndarray): Decoded OpenCV image.
+            - prediction (str): Classified scenario name (e.g., "pouring_food").
+            - normalized (set): Set of normalized class labels detected.
+            - tracked_objects (list): List of tracked objects with IDs, labels, and bounding boxes.
+    """
     try:
         # ✅ Decode and prepare image
         image_data = base64.b64decode(base64_string)
         image_array = np.frombuffer(image_data, dtype=np.uint8)
         img_np = cv2.imdecode(image_array, cv2.IMREAD_COLOR)  # זה יחזיר BGR עם צבעים נכונים
-
 
         # ✅ Run YOLO
         results = yolo_model.predict(img_np, conf=0.3)
