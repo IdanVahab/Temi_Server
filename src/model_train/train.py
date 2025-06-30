@@ -1,122 +1,103 @@
-# Importing YOLO model from Ultralytics package
-from ultralytics import YOLO  
+"""
+train.py - YOLOv8 custom training script for kitchen scenario detection
 
-# Importing Path from pathlib to handle directory paths
-from pathlib import Path  
+This script loads a pre-trained YOLOv8 model and retrains it using a Roboflow dataset
+that includes labels such as metal_pot, plate, microwave, and cutlery.
+Results are saved to a structured output folder and include plots and CSV metrics.
 
-# Importing os to handle file system operations like creating directories
-import os  
+Requirements:
+- Python 3.8
+- ultralytics (YOLOv8)
+- torch
 
-# Importing random for setting seeds (for reproducibility)
-import random  
+Author: Idan Vahab
+"""
 
-# Importing torch (PyTorch) for deep learning model handling and GPU use
-import torch  
+from ultralytics import YOLO
+from pathlib import Path
+import os
+import random
+import torch
 
 # =======================
 # CONFIGURATION SECTION
 # =======================
 
-# Path to the dataset configuration YAML file (defines classes, images, annotations)
-data_yaml = "C:/Users/Idan Vahab/Desktop/TemiSafetyApp/roboflow/data.yaml"  
+# Relative path to dataset configuration
+data_yaml = Path("roboflow/data.yaml")
 
-# Name of the project folder for saving results
-project_name = "yolo_custom_training"  
+# Project and run names
+project_name = "yolo_custom_training"
+run_name = "yolov8s_run"
 
-# Name for this specific training run (used in result folder naming)
-run_name = "yolov8s_run"  
+# Path to YOLO weights
+model_arch = Path("src/model_train/yolo_custom_training/yolov8s_run/weights/best.pt")
 
-# Path to the pretrained YOLO model weights (from previous training)
-model_arch = "C:/Users/Idan Vahab/Desktop/TemiSafetyApp/src/yolo_custom_training/yolov8s_run/weights/best.pt"  
-
-# Input image size (640x640 pixels)
-img_size = 640  
-
-# Number of training epochs (full passes over the dataset)
-epochs = 50  
-
-# Batch size (number of images processed together before weight update)
-batch = 8  
-
-# Random seed for reproducibility (ensures results can be replicated)
-seed = 42  
+# Training hyperparameters
+img_size = 640
+epochs = 50
+batch = 8
+seed = 42
 
 # =======================
-# OUTPUT & FOLDER SETUP
+# OUTPUT SETUP
 # =======================
 
-# Define the output directory where results will be saved
-output_dir = Path(f"runs/detect/{run_name}")  
-
-# Create the output directory if it doesn’t exist
-os.makedirs(output_dir, exist_ok=True)  
+output_dir = Path(f"runs/detect/{run_name}")
+os.makedirs(output_dir, exist_ok=True)
 
 # =======================
-# REPRODUCIBILITY SETUP
+# REPRODUCIBILITY
 # =======================
 
-# Set Python random seed
-random.seed(seed)  
-
-# Set PyTorch random seed for CPU
-torch.manual_seed(seed)  
-
-# Set PyTorch random seed for all GPUs
-torch.cuda.manual_seed_all(seed)  
+random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 
 # =======================
-# LOAD MODEL + START TRAINING
+# LOAD MODEL
 # =======================
 
-# Load YOLO model with specified weights
-model = YOLO(model_arch)  
+model = YOLO(str(model_arch))
 
-# Run only if this script is the main execution (not imported as a module)
-if __name__ == "__main__":  
-    # Start training with the defined parameters
+if __name__ == "__main__":
+    """
+    Start YOLOv8 training with custom configuration.
+    """
     model.train(
-        data=data_yaml,             # Dataset YAML path
-        epochs=epochs,              # Number of epochs
-        imgsz=img_size,             # Input image size
-        batch=batch,                # Batch size
-        seed=seed,                  # Random seed
-        project=project_name,       # Project folder name
-        name=run_name,              # Run folder name
-        workers=4,                  # Number of CPU workers (for data loading)
-        device=0,                   # Device to use (0 = first GPU)
-        val=True,                   # Run validation during training
-        verbose=True,               # Show detailed training logs
-        save=True,                  # Save checkpoints and results
-        save_period=1,              # Save after every epoch
-        exist_ok=True,              # Allow overwriting previous runs
-        pretrained=False,           # Do NOT start from pretrained COCO weights (use our weights)
-        resume=False,               # Do NOT resume from last checkpoint
-        lr0=0.01,                   # Initial learning rate
-        warmup_epochs=3,            # Number of warmup epochs
-        patience=10,                # Early stopping patience (stop if no improvement)
-        deterministic=True,         # Force deterministic training for reproducibility
-        close_mosaic=5,             # Stop using mosaic augmentation after 5 epochs
-        auto_augment='randaugment', # Use RandAugment for data augmentation
-        iou=0.5,                    # IoU threshold (used in loss calculation)
-        conf=0.15,                  # Confidence threshold for object predictions
-        box=5.0,                    # Box loss weight
-        cls=0.3,                    # Classification loss weight
-        dfl=1.5,                    # Distribution focal loss weight
-        cos_lr=True,                # Use cosine learning rate scheduler
-        dropout=0.1,                # Dropout rate for regularization
-        save_conf=True,             # Save confidence scores in outputs
-        plots=True                  # Generate training plots
+        data=str(data_yaml),
+        epochs=epochs,
+        imgsz=img_size,
+        batch=batch,
+        seed=seed,
+        project=project_name,
+        name=run_name,
+        workers=4,
+        device=0,
+        val=True,
+        verbose=True,
+        save=True,
+        save_period=1,
+        exist_ok=True,
+        pretrained=False,
+        resume=False,
+        lr0=0.01,
+        warmup_epochs=3,
+        patience=10,
+        deterministic=True,
+        close_mosaic=5,
+        auto_augment='randaugment',
+        iou=0.5,
+        conf=0.15,
+        box=5.0,
+        cls=0.3,
+        dfl=1.5,
+        cos_lr=True,
+        dropout=0.1,
+        save_conf=True,
+        plots=True
     )
 
-# =======================
-# RESULT SUMMARY PRINT
-# =======================
-
-# Print completion message with result folder path
-print(f"✅ Training complete. Results saved in: {output_dir}")  
-
-# Print instruction to open the metrics image
-print(f"📈 To visualize metrics: open {output_dir}/results.png")  
-
-# Print instruction to open the CSV file with detailed results
-print(f"📉 To analyze CSV: open {output_dir}/results.csv")  
+    print(f"✅ Training complete. Results saved in: {output_dir}")
+    print(f"📈 To visualize metrics: open {output_dir}/results.png")
+    print(f"📉 To analyze CSV: open {output_dir}/results.csv")
