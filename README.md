@@ -177,6 +177,7 @@ F --> H[Robot Decision Engine]
 
 
 ###📎 Notes
+
 Model file moondream-0_5b-int8.mf is too large for GitHub (>600MB).
 If using MoonDream, place this file manually in src/.
 
