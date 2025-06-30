@@ -3,21 +3,35 @@ import time
 import math
 
 class ScenarioHandler:
+    """
+    A rule-based scenario detection engine that analyzes sequences of object labels
+    and tracked movements to identify meaningful events (scenarios) in the environment.
+
+    This class is designed to support cognitive assistance by recognizing steps
+    in structured tasks (e.g., heating food), including motion, co-occurrence,
+    and presence/absence logic over time.
+    """
+
     def __init__(self, max_history=10):
+        """
+        Initializes the scenario handler with history buffers and cooldown logic.
+
+        Args:
+            max_history (int): Number of recent frames to store for label/timestamp history.
+        """
         self.label_history = deque(maxlen=max_history)
         self.timestamp_history = deque(maxlen=max_history)
         self.last_pour_time = 0
         self.POUR_COOLDOWN = 4  # seconds
 
-        # Tracking תנועה לפי Track ID
         self.track_history = {}  # track_id -> deque of bbox positions
         self.label_by_track_id = {}  # track_id -> label
-        self.MOVEMENT_THRESHOLD = 15  # pixels (euclidean distance)
+        self.MOVEMENT_THRESHOLD = 15  # pixels
         self.MAX_TRACK_HISTORY = 5
 
-        # ניהול תרחישים אחרונים ו־cooldown
         self.last_reported_scenario = None
         self.last_report_time = 0
+
         self.scenario_cooldowns = {
             "pouring_food": 5,
             "plate_inserted_into_microwave": 5,
@@ -28,19 +42,31 @@ class ScenarioHandler:
             "pot_moved": 5,
             "cutlery_used": 5,
             "person_interacts": 5,
-            "metal_pot_in_microwave": 1,  # חירום – דיווח מהיר
+            "metal_pot_in_microwave": 1,  # emergency
         }
         self.incident_counters = {}
 
     def update(self, labels: set):
+        """
+        Add a new set of detected labels with timestamp to history.
+
+        Args:
+            labels (set): Set of object labels detected in the current frame.
+        """
         now = time.time()
         self.label_history.append(labels)
         self.timestamp_history.append(now)
 
     def update_tracking(self, tracked_objects: list):
+        """
+        Update motion history for each tracked object.
+
+        Args:
+            tracked_objects (list): List of objects with keys 'id', 'bbox', 'label'.
+        """
         for obj in tracked_objects:
             track_id = obj["id"]
-            bbox = obj["bbox"]  # [left, top, width, height]
+            bbox = obj["bbox"]
             label = obj["label"]
             self.label_by_track_id[track_id] = label
             center_x = bbox[0] + bbox[2] / 2
@@ -52,6 +78,15 @@ class ScenarioHandler:
             self.track_history[track_id].append(point)
 
     def is_moving(self, track_id: int) -> bool:
+        """
+        Determine if an object is currently moving based on positional deltas.
+
+        Args:
+            track_id (int): ID of the tracked object.
+
+        Returns:
+            bool: True if the object has moved more than threshold, else False.
+        """
         if track_id not in self.track_history or len(self.track_history[track_id]) < 2:
             return False
         p1 = self.track_history[track_id][-2]
@@ -62,6 +97,9 @@ class ScenarioHandler:
         return distance > self.MOVEMENT_THRESHOLD
 
     def detect_pouring_scenario(self) -> bool:
+        """
+        Detect if food is being poured from pot to plate/bowl, based on co-occurrence and timing.
+        """
         now = time.time()
         pot_times = []
         plate_times = []
@@ -80,6 +118,9 @@ class ScenarioHandler:
         return False
 
     def detect_plate_removed_scenario(self) -> bool:
+        """
+        Detect if a plate was removed from the microwave while the door was open.
+        """
         if len(self.label_history) < 2:
             return False
 
@@ -91,56 +132,84 @@ class ScenarioHandler:
 
         microwave_open = "open microwave" in curr_labels or "open microwave" in prev_labels
 
-        if prev_has_plate and not curr_has_plate and microwave_open:
-            return True
-        return False
+        return prev_has_plate and not curr_has_plate and microwave_open
 
     def detect_pot_and_plate_on_counter(self) -> bool:
+        """
+        Detect if both pot and plate are present together (likely on the counter).
+        """
         if not self.label_history:
             return False
         labels = self.label_history[-1]
         return "pot" in labels and "Plate" in labels
 
     def detect_cutlery_present(self) -> bool:
+        """
+        Detect if cutlery is seen in any recent frame.
+        """
         return any("cutlery" in labels for labels in self.label_history)
 
     def detect_plate_inserted_into_microwave(self) -> bool:
+        """
+        Detect plate insertion by presence of plate and open microwave.
+        """
         if not self.label_history:
             return False
         labels = self.label_history[-1]
         return "Plate" in labels and "open microwave" in labels
 
     def detect_plate_moved(self) -> bool:
-        for track_id, label in self.label_by_track_id.items():
-            if label == "Plate" and self.is_moving(track_id):
-                return True
-        return False
+        """
+        Detect if a plate object is currently in motion.
+        """
+        return any(
+            label == "Plate" and self.is_moving(track_id)
+            for track_id, label in self.label_by_track_id.items()
+        )
 
     def detect_pot_moved(self) -> bool:
-        for track_id, label in self.label_by_track_id.items():
-            if label == "pot" and self.is_moving(track_id):
-                return True
-        return False
+        """
+        Detect if a pot object is currently in motion.
+        """
+        return any(
+            label == "pot" and self.is_moving(track_id)
+            for track_id, label in self.label_by_track_id.items()
+        )
 
     def detect_cutlery_used(self) -> bool:
-        for track_id, label in self.label_by_track_id.items():
-            if label == "cutlery" and self.is_moving(track_id):
-                return True
-        return False
+        """
+        Detect if cutlery is being used (movement).
+        """
+        return any(
+            label == "cutlery" and self.is_moving(track_id)
+            for track_id, label in self.label_by_track_id.items()
+        )
 
     def detect_person_interacts(self) -> bool:
-        for track_id, label in self.label_by_track_id.items():
-            if label == "person" and self.is_moving(track_id):
-                return True
-        return False
+        """
+        Detect if a person is interacting (i.e., moving).
+        """
+        return any(
+            label == "person" and self.is_moving(track_id)
+            for track_id, label in self.label_by_track_id.items()
+        )
 
     def detect_metal_pot_in_microwave(self) -> bool:
+        """
+        Detect if a metal pot is inside the microwave – an emergency.
+        """
         if not self.label_history:
             return False
         labels = self.label_history[-1]
         return "metal_pot_in_microwave" in labels
 
     def should_send_scenario(self, scenario_name):
+        """
+        Determine if the scenario should be reported based on cooldowns.
+
+        Returns:
+            Tuple[bool, Optional[str]]: (should_send, incident_id if emergency)
+        """
         now = time.time()
         cooldown = self.scenario_cooldowns.get(scenario_name, 5)
 
@@ -158,6 +227,10 @@ class ScenarioHandler:
         return False, None
 
     def get_active_scenario(self):
+        """
+        Evaluate all known scenario detectors by priority.
+        Returns the first valid scenario that passes cooldown check.
+        """
         scenario_order = [
             ("metal_pot_in_microwave", self.detect_metal_pot_in_microwave),
             ("pouring_food", self.detect_pouring_scenario),
